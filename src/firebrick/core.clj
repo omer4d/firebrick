@@ -27,8 +27,14 @@
       :fx (+ fx (* ax m))
       :fy (+ fy (* ay m)))))
 
+(defn bounce [{pos :Position, phys :Physics, ball-data :BallData}]
+  (let [{:keys [vx vy]} phys
+        {:keys [x y]} pos
+        {:keys [rad]} ball-data]
+    [(assoc)]))
+
 (defn ball-logic [ball dt]
-  (entity-thread ball (accel 0 10) (phys-step dt)))
+  (entity-thread ball (accel 1 1) (phys-step dt)))
 
 (defn make-ball [x y rad col]
   (make-entity [(Position* x y)
@@ -36,8 +42,9 @@
                 (BallData* rad col)]
                ball-logic))
 
-(let [ball (make-ball 0 0 10 "red")]
-  ((:logic ball) ball 0.1))
+
+
+(def ball-state (atom (make-ball 100 100 10 "red")))
 
 (defn setup []
   (q/smooth)                          ;; Turn on anti-aliasing
@@ -45,18 +52,20 @@
   (q/background 200))                 ;; Set the background colour to
                                       ;; a nice shade of grey.
 (defn draw []
-  (q/stroke (q/random 255))             ;; Set the stroke colour to a random grey
-  (q/stroke-weight (q/random 10))       ;; Set the stroke thickness randomly
-  (q/fill (q/random 255))               ;; Set the fill colour to a random grey
+  ;(q/stroke (q/random 255))             ;; Set the stroke colour to a random grey
+  ;(q/stroke-weight (q/random 10))       ;; Set the stroke thickness randomly
+  ;(q/fill (q/random 255))               ;; Set the fill colour to a random grey
+
+  (swap! ball-state (:logic @ball-state) 0.1)
 
   (let [diam (q/random 100)             ;; Set the diameter to a value between 0 and 100
         x    (q/random (q/width))       ;; Set the x coord randomly within the sketch
         y    (q/random (q/height))]     ;; Set the y coord randomly within the sketch
-    (q/ellipse x y diam diam)))         ;; Draw a circle at x y with the correct diameter
+    (q/ellipse (:x (:Position @ball-state)) (:y (:Position @ball-state)) 100 100)))         ;; Draw a circle at x y with the correct diameter
 
 (q/defsketch example                  ;; Define a new sketch named example
   :title "Oh so many grey circles"    ;; Set the title of the sketch
   :setup setup                        ;; Specify the setup fn
   :draw draw                          ;; Specify the draw fn
-  :size [323 200])
+  :size [1024 768])
                     ;; You struggle to beat the golden ratio
