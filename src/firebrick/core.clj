@@ -3,6 +3,7 @@
 
 (load "core_comp")
 (load "core_entity")
+(load "core_util")
 
 (defcomp Position [x y])
 
@@ -27,24 +28,30 @@
       :fx (+ fx (* ax m))
       :fy (+ fy (* ay m)))))
 
-(defn bounce [{pos :Position, phys :Physics, ball-data :BallData}]
+(defn bounce [{pos :Position, phys :Physics} x0 y0 x1 y1]
   (let [{:keys [vx vy]} phys
         {:keys [x y]} pos
-        {:keys [rad]} ball-data]
-    [(assoc)]))
+        vx1 (* vx (if (out-of-range? x x0 x1) -1 1))
+        vy1 (* vy (if (out-of-range? y y0 y1) -1 1))]
+    [(assoc phys :vx vx1 :vy vy1)
+     (assoc pos :x (clamp x x0 x1), :y (clamp y y0 y1))]))
 
 (defn ball-logic [ball dt]
-  (entity-thread ball (accel 1 1) (phys-step dt)))
+  (let [r (:radius (:BallData ball))]
+    (entity-thread ball
+                   (accel 0 50)
+                   (phys-step dt)
+                   (bounce r r (- 1024 r) (- 768 r)))))
 
 (defn make-ball [x y rad col]
   (make-entity [(Position* x y)
-                (Physics* 1 0 0 0 0)
+                (Physics* 1 0 0 100 0)
                 (BallData* rad col)]
                ball-logic))
 
 
 
-(def ball-state (atom (make-ball 100 100 10 "red")))
+(def ball-state (atom (make-ball 100 100 50 "red")))
 
 (defn setup []
   (q/smooth)                          ;; Turn on anti-aliasing
