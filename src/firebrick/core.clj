@@ -31,8 +31,8 @@
 (defn bounce [{pos :Position, phys :Physics} x0 y0 x1 y1]
   (let [{:keys [vx vy]} phys
         {:keys [x y]} pos
-        vx1 (* vx (if (out-of-range? x x0 x1) -1 1))
-        vy1 (* vy (if (out-of-range? y y0 y1) -1 1))]
+        vx1 (* vx (if (outside-range? x x0 x1) -1 1))
+        vy1 (* vy (if (outside-range? y y0 y1) -1 1))]
     [(assoc phys :vx vx1 :vy vy1)
      (assoc pos :x (clamp x x0 x1), :y (clamp y y0 y1))]))
 
@@ -49,7 +49,8 @@
                 (BallData* rad col)]
                ball-logic))
 
-
+(defn repel [ents]
+  ())
 
 (def ball-state (atom (make-ball 100 100 50 "red")))
 
@@ -63,7 +64,7 @@
   ;(q/stroke-weight (q/random 10))       ;; Set the stroke thickness randomly
   ;(q/fill (q/random 255))               ;; Set the fill colour to a random grey
 
-  (swap! ball-state (:logic @ball-state) 0.1)
+  (swap! ball-state (:logic (:CoreComp @ball-state)) 0.1)
 
   (let [diam (q/random 100)             ;; Set the diameter to a value between 0 and 100
         x    (q/random (q/width))       ;; Set the x coord randomly within the sketch

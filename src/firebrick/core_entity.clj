@@ -1,9 +1,6 @@
 (ns firebrick.core)
 
-(defn make-entity [comps logic]
-  (assoc
-    (zipmap (map :comp-type comps) comps)
-    :logic logic))
+(defcomp CoreComp [logic death-flag])
 
 (defn entity-assoc [ent comps]
   (if (sequential? comps)
@@ -20,3 +17,8 @@
 
 (defmacro entity-thread [ent & forms]
   `(-> ~ent ~@(map make-entity-applier forms)))
+
+(defn make-entity [comps logic]
+  (assoc
+    (zipmap (map :comp-type comps) comps)
+    :CoreComp (CoreComp* logic false)))
