@@ -22,3 +22,6 @@
   (assoc
     (zipmap (map :comp-type comps) comps)
     :CoreComp (CoreComp* logic false)))
+
+(defn run-entity-logic [ent dt]
+  ((:logic (:CoreComp ent)) ent dt))

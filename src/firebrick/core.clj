@@ -43,37 +43,42 @@
                    (phys-step dt)
                    (bounce r r (- 1024 r) (- 768 r)))))
 
-(defn make-ball [x y rad col]
+(defn make-ball [x y vx vy rad col]
   (make-entity [(Position* x y)
-                (Physics* 1 0 0 100 0)
+                (Physics* 1 0 0 vx vy)
                 (BallData* rad col)]
                ball-logic))
 
-(defn repel [ents]
-  ())
+(defn make-entity-map [ents]
+  (zipmap (range) ents))
 
-(def ball-state (atom (make-ball 100 100 50 "red")))
+(defn repel [ents]
+  (for [{pos1 :Position phys1 :Physics} ents
+        {pos2 :Position phys2 :Physics} ents]
+    ()))
+
+(defn simulate-balls [ent-map dt]
+  (into {} (for [[k v] ent-map] [k (run-entity-logic v dt)])))
+
+(defn generate-random-balls [n]
+  (repeatedly n #(make-ball (rand-int 1024) (rand-int 768) (rand-int 100) (rand-int 100) (+ 25 (rand-int 25)) [(rand-int 255) (rand-int 255) (rand-int 255)])))
+
+(def balls (atom (make-entity-map (generate-random-balls 10))))
 
 (defn setup []
-  (q/smooth)                          ;; Turn on anti-aliasing
-  (q/frame-rate 60)                    ;; Set framerate to 1 FPS
-  (q/background 200))                 ;; Set the background colour to
-                                      ;; a nice shade of grey.
+  (q/smooth)
+  (q/frame-rate 60)
+  (q/background 200))
+
 (defn draw []
-  ;(q/stroke (q/random 255))             ;; Set the stroke colour to a random grey
-  ;(q/stroke-weight (q/random 10))       ;; Set the stroke thickness randomly
-  ;(q/fill (q/random 255))               ;; Set the fill colour to a random grey
+  (q/background-float 200)
+  (swap! balls simulate-balls 0.05)
+  (doseq [{pos :Position ball-data :BallData} (vals @balls)]
+    (apply q/fill (:color ball-data))
+    (q/ellipse (:x pos) (:y pos) (* 2 (:radius ball-data)) (* 2 (:radius ball-data)))))
 
-  (swap! ball-state (:logic (:CoreComp @ball-state)) 0.1)
-
-  (let [diam (q/random 100)             ;; Set the diameter to a value between 0 and 100
-        x    (q/random (q/width))       ;; Set the x coord randomly within the sketch
-        y    (q/random (q/height))]     ;; Set the y coord randomly within the sketch
-    (q/ellipse (:x (:Position @ball-state)) (:y (:Position @ball-state)) 100 100)))         ;; Draw a circle at x y with the correct diameter
-
-(q/defsketch example                  ;; Define a new sketch named example
-  :title "Oh so many grey circles"    ;; Set the title of the sketch
-  :setup setup                        ;; Specify the setup fn
-  :draw draw                          ;; Specify the draw fn
+(q/defsketch example
+  :title "Oh so many grey circles"
+  :setup setup
+  :draw draw
   :size [1024 768])
-                    ;; You struggle to beat the golden ratio
