@@ -1,0 +1,5 @@
+package firebrick.core.java;
+
+public class Foo {
+    public static final String value = "Michiel";
+}

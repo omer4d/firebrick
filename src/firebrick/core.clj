@@ -6,7 +6,7 @@
 (load "core_comp")
 (load "core_entity")
 (load "core_util")
-(load "core_vec2")
+(load "core_vec")
 
 (defcomp Position [x y])
 
@@ -40,11 +40,16 @@
      (assoc pos :x (clamp x x0 x1), :y (clamp y y0 y1))]))
 
 (defn ball-logic [ball dt]
-  (let [r (:radius (:BallData ball))]
+  (let [r (-> ball :BallData :radius)]
     (entity-thread ball
                    (accel 0 50)
                    (phys-step dt)
                    (bounce r r (- 1024 r) (- 768 r)))))
+
+(macroexpand '(entity-thread ball
+                   (accel 0 50)
+                   (phys-step dt)
+                   (bounce r r (- 1024 r) (- 768 r))))
 
 (defn make-ball [x y vx vy rad col]
   (make-entity [(Position* x y)
@@ -52,6 +57,9 @@
                 (BallData* rad col)]
                ball-logic))
 
+(make-entity [(Position* 1 2)] nil)
+
+(make-ball 10 10 20 20 0 "green")
 (defn make-entity-map [ents]
   (zipmap (range) ents))
 
@@ -71,8 +79,8 @@
 (let [ent (make-ball 2 6 0 0 1 0)]
   (-> ent :Position :y))
 
-(repel {1 (make-ball 2 2 0 0 1 0)
-        2 (make-ball 0 0 0 0 2 0)})
+;(repel {1 (make-ball 2 2 0 0 1 0)
+;        2 (make-ball 0 0 0 0 2 0)})
 
 (reduce + [1 2 3 4])
 
@@ -84,50 +92,26 @@
 (defn generate-random-balls [n]
   (repeatedly n #(make-ball (rand-int 1024) (rand-int 768) (rand-int 100) (rand-int 100) (+ 25 (rand-int 25)) [(rand-int 255) (rand-int 255) (rand-int 255)])))
 
-(def balls (atom (make-entity-map (generate-random-balls 500))))
-
-(defmacro defcomp2 [comp-name fields]
-  `(do
-     (defrecord ~comp-name [~@fields])
-     (defn ~(make-sym comp-name "*") [~@fields]
-       (~(make-sym comp-name ".") ~@fields))))
-
-(defcomp2 Cloj2 [z])
-
-(Cloj2* 1)
-
-(defcomp2 Cloj [x y z])
-
-(Cloj* 1 2 3)
-
-;(defrecord Zuby [x y z])
-
-;(new Zuby 1 2 3)
-
-;(macroexpand '(defcomp2 Foo [x y z]))
-
-;(do (defrecord Baz [x y z])
-;  (Baz. 1 2 3))
-
-;(Baz. 1 2 3)
-
-
-;(do (defcomp2 Baz [x y z]))
-
-;(defcomp2 Baz [x y z])
-
-;(Baz. 1 2 3)
+(def balls (atom (make-entity-map (generate-random-balls 5000))))
 
 (defn setup []
   (q/frame-rate 60)
-  (q/background 200))
+  (q/background 200)
+  (q/text-font (q/create-font "DejaVu Sans" 28 true)))
+
+;(profile-crap)
 
 (defn draw []
   (q/background-float 200)
+    (q/text (str (q/current-frame-rate))
+          300   ; x
+          100)
+
   (swap! balls simulate-balls 0.05)
-  (doseq [{pos :Position ball-data :BallData} (vals @balls)]
+
+  (comment (doseq [{pos :Position ball-data :BallData} (vals @balls)]
     (apply q/fill (:color ball-data))
-    (q/ellipse (:x pos) (:y pos) 1 1)))
+    (q/ellipse (:x pos) (:y pos) 1 1))))
 
 (q/defsketch example
   :title "Oh so many grey circles"

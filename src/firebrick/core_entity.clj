@@ -2,25 +2,25 @@
 
 (defcomp CoreComp [logic death-flag])
 
-(defn entity-assoc [ent comps]
+(defn entity-assoc! [ent comps]
   (if (sequential? comps)
-    (apply assoc ent (interleave (map :comp-type comps) comps))
-    (assoc ent (:comp-type comps) comps)))
+    (apply assoc! ent (interleave (map get-comp-type comps) comps))
+    (assoc! ent (get-comp-type comps) comps)))
 
-(defn entity-apply [ent f & args]
-  (entity-assoc ent (apply f ent args)))
+(defn entity-apply! [ent f & args]
+  (entity-assoc! ent (apply f ent args)))
 
 (defn make-entity-applier [form]
   (if (sequential? form)
-    (cons 'entity-apply form)
-    (list 'entity-apply form)))
+    (cons 'entity-apply! form)
+    (list 'entity-apply! form)))
 
 (defmacro entity-thread [ent & forms]
-  `(-> ~ent ~@(map make-entity-applier forms)))
+  `(persistent! (-> (transient ~ent) ~@(map make-entity-applier forms))))
 
 (defn make-entity [comps logic]
   (assoc
-    (zipmap (map :comp-type comps) comps)
+    (zipmap (map get-comp-type comps) comps)
     :CoreComp (CoreComp* logic false)))
 
 (defn run-entity-logic [ent dt]
