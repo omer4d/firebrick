@@ -63,18 +63,6 @@
 (defn make-entity-map [ents]
   (zipmap (range) ents))
 
-(defn repulsive-force [x1 y1 x2 y2]
-  (let [r (dist2d x1 y1 x2 y2)
-        r3 (* r r r)
-        dx (- x2 x1)
-        dy (- y2 y1)]
-    (Vec2. (/ dx r3) (/ dy r3))))
-
-(defn repel [ent-map]
-  (for [[k v] ent-map]
-    (let [the-rest (vals (dissoc ent-map k))]
-      [(reduce #(vec2+ %1 (repulsive-force (-> %2 :Position :x) (-> %2 :Position :y)
-                                           (-> v :Position :x) (-> v :Position :y))) (Vec2. 0 0) the-rest)])))
 
 (let [ent (make-ball 2 6 0 0 1 0)]
   (-> ent :Position :y))
@@ -84,7 +72,6 @@
 
 (reduce + [1 2 3 4])
 
-(reduce vec2+ [(Vec2. 1 1) (Vec2. 2 2) (Vec2. 3 3)])
 
 (defn simulate-balls [ent-map dt]
   (into {} (for [[k v] ent-map] [k (run-entity-logic v dt)])))
@@ -109,9 +96,9 @@
 
   (swap! balls simulate-balls 0.05)
 
-  (comment (doseq [{pos :Position ball-data :BallData} (vals @balls)]
+  (doseq [{pos :Position ball-data :BallData} (vals @balls)]
     (apply q/fill (:color ball-data))
-    (q/ellipse (:x pos) (:y pos) 1 1))))
+    (q/ellipse (:x pos) (:y pos) 1 1)))
 
 (q/defsketch example
   :title "Oh so many grey circles"
