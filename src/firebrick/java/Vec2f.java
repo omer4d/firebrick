@@ -1,12 +1,34 @@
 package firebrick.core;
 
-public class Vec2f {
+import clojure.lang.IObj;
+import clojure.lang.IPersistentMap;
+
+public class Vec2f implements IObj {
   public final double x, y;
+  private final IPersistentMap meta;
 
   public Vec2f(double x, double y)
   {
     this.x = x;
     this.y = y;
+    this.meta = null;
+  }
+
+  private Vec2f(IPersistentMap meta, double x, double y)
+  {
+    this.x = x;
+    this.y = y;
+    this.meta = meta;
+  }
+
+  public IObj withMeta(IPersistentMap meta)
+  {
+    return new Vec2f(meta, x, y);
+  }
+
+  public IPersistentMap meta()
+  {
+    return meta;
   }
 
   public static double dot(Vec2f v1, Vec2f v2)

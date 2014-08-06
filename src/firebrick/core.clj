@@ -1,5 +1,6 @@
 (ns firebrick.core
-  (:require [quil.core :as q]))
+  (:require [quil.core :as q])
+  (:import firebrick.core.Vec2f))
 
 (use 'clojure.walk)
 
@@ -7,12 +8,18 @@
 (load "core_entity")
 (load "core_util")
 (load "core_vec")
+(load "core_vec2")
 
 (defcomp Position [x y])
 
 (defcomp Physics [m fx fy vx vy])
 
 (defcomp BallData [radius color])
+
+(defn TestComp* [x y]
+  (with-meta (Vec2f. x y) {:comp-type :TestComp}))
+
+(meta (TestComp* 1 2))
 
 (defn phys-step [{pos :Position, phys :Physics} dt]
   (let [{:keys [m fx fy vx vy]} phys
