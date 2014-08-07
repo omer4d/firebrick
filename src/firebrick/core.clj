@@ -10,9 +10,13 @@
 (load "core_vec")
 (load "core_vec2")
 
-(defcomp Position [x y])
+(set! *warn-on-reflection* true)
 
-(defcomp Physics [m fx fy vx vy])
+(defcomp Position [^Vec2f v])
+
+(defcomp Velocity [^Vec2f v])
+
+(defcomp Physics [f m])
 
 (defcomp BallData [radius color])
 
@@ -21,50 +25,59 @@
 
 (meta (TestComp* 1 2))
 
-(defn phys-step [{pos :Position, phys :Physics} dt]
-  (let [{:keys [m fx fy vx vy]} phys
-        {:keys [x y]} pos
+(defn phys-step [{pos :Position, vel :Velocity, phys :Physics} dt]
+  (let [{:keys [m f]} phys
         invm (/ m)
-        vx1 (+ vx (* fx invm dt))
-        vy1 (+ vy (* fy invm dt))
-        x1 (+ x (* vx1 dt))
-        y1 (+ y (* vy1 dt))]
-    [(assoc pos :x x1, :y y1)
-     (assoc phys :fx 0, :fy 0, :vx vx1, :vy vy1)]))
+        vel1 (v+ (:v vel) (v* f invm dt))
+        pos1 (v+ (:v pos) (v* vel1 dt))]
+    [(assoc pos :v pos1)
+     (assoc phys :f (Vec2f. 0 0))
+     (assoc vel :v vel1)]))
 
-(defn accel [{phys :Physics} ax ay]
-  (let [{:keys [fx fy m]} phys]
-    (assoc phys
-      :fx (+ fx (* ax m))
-      :fy (+ fy (* ay m)))))
+(defn accel [{phys :Physics} a]
+  (let [{:keys [f m]} phys]
+    (assoc phys :f (v+ f (v* a m)))))
 
-(defn bounce [{pos :Position, phys :Physics} x0 y0 x1 y1]
-  (let [{:keys [vx vy]} phys
-        {:keys [x y]} pos
+(defn kaka [{pos :Position}]
+  (let [^Vec2f v (:v pos)]
+    (-> v .x)))
+
+(kaka (make-entity [(Position* (Vec2f. 1 1))] nil))
+
+(defn bounce [{^Position pos :Position, ^Velocity vel :Velocity, phys :Physics} x0 y0 x1 y1]
+  (let [^Vec2f velv (:v vel)
+        ^Vec2f posv (:v pos)
+
+        vx (-> velv .x)
+        vy (-> velv .y)
+        x (-> posv .x)
+        y (-> posv .y)
         vx1 (* vx (if (outside-range? x x0 x1) -1 1))
         vy1 (* vy (if (outside-range? y y0 y1) -1 1))]
-    [(assoc phys :vx vx1 :vy vy1)
-     (assoc pos :x (clamp x x0 x1), :y (clamp y y0 y1))]))
+    [(assoc vel :v (Vec2f. vx1 vy1))
+     (assoc pos :v (Vec2f. (clamp x x0 x1) (clamp y y0 y1)))]))
 
 (defn ball-logic [ball dt]
   (let [r (-> ball :BallData :radius)]
     (entity-thread ball
-                   (accel 0 50)
+                   (accel (Vec2f. 0 50))
                    (phys-step dt)
                    (bounce r r (- 1024 r) (- 768 r)))))
 
 (macroexpand '(entity-thread ball
-                   (accel 0 50)
+                   (accel (Vec2f. 0 50))
                    (phys-step dt)
                    (bounce r r (- 1024 r) (- 768 r))))
 
 (defn make-ball [x y vx vy rad col]
-  (make-entity [(Position* x y)
-                (Physics* 1 0 0 vx vy)
+  (make-entity [(Position* (Vec2f. x y))
+                (Velocity* (Vec2f. vx vy))
+                (Physics* (Vec2f. 0 0) 1)
                 (BallData* rad col)]
                ball-logic))
 
-(make-entity [(Position* 1 2)] nil)
+;(-> (make-entity [(Position* (Vec2f. 1 1))] nil) :Position :v .x)
+
 
 (make-ball 10 10 20 20 0 "green")
 (defn make-entity-map [ents]
@@ -103,9 +116,9 @@
 
   (swap! balls simulate-balls 0.05)
 
-  (doseq [{pos :Position ball-data :BallData} (vals @balls)]
+  (doseq [{{^Vec2f posv :v} :Position ball-data :BallData} (vals @balls)]
     (apply q/fill (:color ball-data))
-    (q/ellipse (:x pos) (:y pos) 1 1)))
+    (q/ellipse (.x posv) (.y posv) 1 1)))
 
 (q/defsketch example
   :title "Oh so many grey circles"

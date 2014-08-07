@@ -31,6 +31,11 @@ public class Vec2f implements IObj {
     return meta;
   }
 
+  public static Vec2f scale(Vec2f v, double k)
+  {
+    return new Vec2f(v.x * k, v.y * k);
+  }
+
   public static double dot(Vec2f v1, Vec2f v2)
   {
     return v1.x * v2.x + v1.y * v2.y;

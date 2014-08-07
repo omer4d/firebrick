@@ -16,6 +16,10 @@
       ([^Vec2f v1 ^Vec2f v2 ^Vec2f v3 ^Vec2f v4 ^Vec2f v5]           (Vec2f/diff v1 v2 v3 v4 v5))
       ([^Vec2f v1 ^Vec2f v2 ^Vec2f v3 ^Vec2f v4 ^Vec2f v5 ^Vec2f v6] (Vec2f/diff v1 v2 v3 v4 v5 v6)))
 
+  (v* ([^Vec2f v ^double k1]                                             (Vec2f/scale v k1))
+      ([^Vec2f v ^double k1 ^double k2]                                  (Vec2f/scale v (* k1 k2)))
+      ([^Vec2f v ^double k1 ^double k2 ^double k3]                       (Vec2f/scale v (* k1 k2 k3))))
+
   (vdot ^double [^Vec2f v1 ^Vec2f v2] (Vec2f/dot v1 v2))
   (vnormal [^Vec2f v] (Vec2f/normal v))
   (vlen [^Vec2f v] (Vec2f/length v))
