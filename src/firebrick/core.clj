@@ -9,6 +9,7 @@
 (load "core_util")
 (load "core_vec")
 (load "core_vec2")
+(load "core_game")
 
 (set! *warn-on-reflection* true)
 
@@ -126,21 +127,9 @@
 
 ; ENTITY LIST FUNCS:
 
-(defn simulate-balls [ent-map dt]
-  (into {} (for [[k v] ent-map] [k (run-entity-logic v dt)])))
-
-;(defn generate-random-balls [n]
-;  (repeatedly n #(make-ball (rand-int 1024) (rand-int 768) (rand-int 100) (rand-int 100) (+ 25 (rand-int 25)) [(rand-int 255) (rand-int 255) (rand-int 255)])))
-
-(defn make-entity-map [ents]
-  (zipmap (range) ents))
-
-(def balls (atom (make-entity-map (generate-random-grid 10 10))))
-
-
+(def game (atom (spawn (make-game) (generate-random-grid 10 10))))
 
 ; Drawing:
-
 
 (defn setup []
   (q/frame-rate 60)
@@ -158,17 +147,12 @@
    (= group :magenta) [255 0 255]
    (= group :yellow) [255 255 0]))
 
-;(assoc (get @balls 0) :BubbleData {:group :green, :state :attached})
-;(get @balls 0)
-
-;(swap! balls (assoc @balls 0 (assoc (get @balls 0) :BubbleData {:group :green, :state :attached})))
-
 (defn draw []
   (q/background-float 200)
 
-  (swap! balls simulate-balls 0.05)
+  (swap! game game-step 0.05)
 
-  (doseq [{{^Vec2f posv :v} :Position, {group :group} :BubbleData} (vals @balls)]
+  (doseq [{{^Vec2f posv :v} :Position, {group :group} :BubbleData} (vals (:ent-map @game))]
     (apply q/fill (get-group-color group))
     (q/ellipse (.x posv) (.y posv) (bub-diam) (bub-diam)))
 

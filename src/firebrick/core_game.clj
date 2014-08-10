@@ -26,7 +26,8 @@
   (into {} (for [[k v] ent-map] [k (run-entity-logic v dt)])))
 
 (defn game-step [game dt]
-  (assoc (consume-spawn-queue game) :ent-map
-    (-> (:ent-map game)
-        (remove-dead-ents)
-        (run-logic dt))))
+  (let [game1 (consume-spawn-queue game)]
+    (assoc game1 :ent-map
+      (-> (:ent-map game1)
+          (remove-dead-ents)
+          (run-logic dt)))))
