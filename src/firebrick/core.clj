@@ -12,18 +12,43 @@
 
 (set! *warn-on-reflection* true)
 
+; Components:
+
 (defcomp Position [^Vec2f v])
 
 (defcomp Velocity [^Vec2f v])
 
 (defcomp Physics [f m])
 
-(defcomp BallData [radius color])
+(defcomp BubbleData [group state])
 
-(defn TestComp* [x y]
-  (with-meta (Vec2f. x y) {:comp-type :TestComp}))
+(defcomp GridComp [i j])
 
-(meta (TestComp* 1 2))
+; Helper funcs:
+
+(defn jfactor [] (* (Math/sqrt 3) 0.5))
+
+(defn xoffs [j cell-size] (* cell-size 0.5 (mod j 2)))
+
+(defn ->j [y cell-size] (Math/floor (/ y (* cell-size (jfactor)))))
+
+(defn ->i [x y cell-size]
+  (let [j (->j y cell-size)]
+    (Math/floor (/ (- x (xoffs j)) cell-size))))
+
+(defn ->y [j cell-size] (+ (* j cell-size (jfactor)) (/ cell-size 2)))
+
+(defn ->x [i j cell-size] (+ (* i cell-size) (/ cell-size 2) (xoffs j cell-size)))
+
+(defn grid->world [i j cell-size] (Vec2f. (->x i j cell-size) (->y j cell-size)))
+
+(defn bub-rad [] 15)
+
+(defn bub-diam [] (* (bub-rad) 2))
+
+(defn groups[] [:red :green :blue :cyan :magenta :yellow])
+
+; Generic behaviors:
 
 (defn phys-step [{pos :Position, vel :Velocity, phys :Physics} dt]
   (let [{:keys [m f]} phys
@@ -38,68 +63,84 @@
   (let [{:keys [f m]} phys]
     (assoc phys :f (v+ f (v* a m)))))
 
-(defn kaka [{pos :Position}]
-  (let [^Vec2f v (:v pos)]
-    (-> v .x)))
+(defn vspring [{vel :Velocity, pos :Position} base k]
+  (assoc vel :v (v+ (:v vel) (v* (v- base (:v pos)) k))))
 
-(kaka (make-entity [(Position* (Vec2f. 1 1))] nil))
-
-(defn bounce [{^Position pos :Position, ^Velocity vel :Velocity, phys :Physics} x0 y0 x1 y1]
+(defn bounce [{pos :Position, vel :Velocity, phys :Physics} x0 y0 x1 y1]
   (let [^Vec2f velv (:v vel)
         ^Vec2f posv (:v pos)
-
-        vx (-> velv .x)
-        vy (-> velv .y)
-        x (-> posv .x)
-        y (-> posv .y)
-        vx1 (* vx (if (outside-range? x x0 x1) -1 1))
-        vy1 (* vy (if (outside-range? y y0 y1) -1 1))]
+        vx1 (* (.x velv) (if (outside-range? (.x posv) x0 x1) -1 1))
+        vy1 (* (.y velv) (if (outside-range? (.y posv) y0 y1) -1 1))]
     [(assoc vel :v (Vec2f. vx1 vy1))
-     (assoc pos :v (Vec2f. (clamp x x0 x1) (clamp y y0 y1)))]))
+     (assoc pos :v (Vec2f. (clamp (.x posv) x0 x1) (clamp (.y posv) y0 y1)))]))
 
-(defn ball-logic [ball dt]
-  (let [r (-> ball :BallData :radius)]
-    (entity-thread ball
+; Bubbles behaviors:
+
+(defn attach-to-grid [{{i :i, j :j} :GridComp :as ent} cell-size]
+  (vspring ent (grid->world i j cell-size) 5))
+
+; logic:
+
+(defn attached-bub-logic [bub dt]
+  (let [r (bub-rad)]
+    (entity-thread bub
+                   (attach-to-grid (bub-diam))
+                   (phys-step dt)
+                   (bounce r r (- 1024 r) (- 768 r)))))
+
+(defn free-bub-logic [bub dt]
+  (let [r (bub-rad)]
+    (entity-thread bub
                    (accel (Vec2f. 0 50))
                    (phys-step dt)
                    (bounce r r (- 1024 r) (- 768 r)))))
 
-(macroexpand '(entity-thread ball
-                   (accel (Vec2f. 0 50))
+(defn shot-bub-logic [bub dt]
+  (let [r (bub-rad)]
+    (entity-thread bub
                    (phys-step dt)
-                   (bounce r r (- 1024 r) (- 768 r))))
+                   (bounce r r (- 1024 r) (- 768 r)))))
 
-(defn make-ball [x y vx vy rad col]
+(defn bub-logic [{{state :state} :BubbleData :as bub} dt]
+  (cond
+   (= state :free) (free-bub-logic bub dt)
+   (= state :attached) (attached-bub-logic bub dt)
+   (= state :shot) (shot-bub-logic bub dt)))
+
+; entity factory funcs:
+
+(defn make-bubble [x y group state]
   (make-entity [(Position* (Vec2f. x y))
-                (Velocity* (Vec2f. vx vy))
+                (Velocity* (Vec2f. 0 0))
                 (Physics* (Vec2f. 0 0) 1)
-                (BallData* rad col)]
-               ball-logic))
+                (BubbleData* group state)]
+               bub-logic))
 
-;(-> (make-entity [(Position* (Vec2f. 1 1))] nil) :Position :v .x)
+(defn make-grid-bubble [i j cell-size]
+  (add-comp (make-bubble (->x i j cell-size) (->y j cell-size) (rand-nth (groups)) :attached) (GridComp* i j)))
 
+(defn generate-random-grid [cols rows]
+  (for [i (range 0 cols)
+        j (range 0 rows)]
+    (make-grid-bubble i j 30)))
 
-(make-ball 10 10 20 20 0 "green")
-(defn make-entity-map [ents]
-  (zipmap (range) ents))
-
-
-(let [ent (make-ball 2 6 0 0 1 0)]
-  (-> ent :Position :y))
-
-;(repel {1 (make-ball 2 2 0 0 1 0)
-;        2 (make-ball 0 0 0 0 2 0)})
-
-(reduce + [1 2 3 4])
-
+; ENTITY LIST FUNCS:
 
 (defn simulate-balls [ent-map dt]
   (into {} (for [[k v] ent-map] [k (run-entity-logic v dt)])))
 
-(defn generate-random-balls [n]
-  (repeatedly n #(make-ball (rand-int 1024) (rand-int 768) (rand-int 100) (rand-int 100) (+ 25 (rand-int 25)) [(rand-int 255) (rand-int 255) (rand-int 255)])))
+;(defn generate-random-balls [n]
+;  (repeatedly n #(make-ball (rand-int 1024) (rand-int 768) (rand-int 100) (rand-int 100) (+ 25 (rand-int 25)) [(rand-int 255) (rand-int 255) (rand-int 255)])))
 
-(def balls (atom (make-entity-map (generate-random-balls 5000))))
+(defn make-entity-map [ents]
+  (zipmap (range) ents))
+
+(def balls (atom (make-entity-map (generate-random-grid 10 10))))
+
+
+
+; Drawing:
+
 
 (defn setup []
   (q/frame-rate 60)
@@ -108,17 +149,32 @@
 
 ;(profile-crap)
 
+(defn get-group-color [group]
+  (cond
+   (= group :red) [255 0 0]
+   (= group :green) [0 255 0]
+   (= group :blue) [0 0 255]
+   (= group :cyan) [0 255 255]
+   (= group :magenta) [255 0 255]
+   (= group :yellow) [255 255 0]))
+
+;(assoc (get @balls 0) :BubbleData {:group :green, :state :attached})
+;(get @balls 0)
+
+;(swap! balls (assoc @balls 0 (assoc (get @balls 0) :BubbleData {:group :green, :state :attached})))
+
 (defn draw []
   (q/background-float 200)
-    (q/text (str (q/current-frame-rate))
-          300   ; x
-          100)
 
   (swap! balls simulate-balls 0.05)
 
-  (doseq [{{^Vec2f posv :v} :Position ball-data :BallData} (vals @balls)]
-    (apply q/fill (:color ball-data))
-    (q/ellipse (.x posv) (.y posv) 1 1)))
+  (doseq [{{^Vec2f posv :v} :Position, {group :group} :BubbleData} (vals @balls)]
+    (apply q/fill (get-group-color group))
+    (q/ellipse (.x posv) (.y posv) (bub-diam) (bub-diam)))
+
+     (q/text (str (q/current-frame-rate))
+          300   ; x
+          100))
 
 (q/defsketch example
   :title "Oh so many grey circles"

@@ -1,6 +1,6 @@
 (ns firebrick.core)
 
-(defcomp CoreComp [logic death-flag])
+(defcomp CoreComp [logic ^Boolean death-flag])
 
 (defn entity-assoc! [ent comps]
   (if (sequential? comps)
@@ -25,3 +25,11 @@
 
 (defn run-entity-logic [ent dt]
   ((:logic (:CoreComp ent)) ent dt))
+
+(defn add-comp [ent comps]
+  (if (sequential? comps)
+    (assoc ent (interleave (map get-comp-type comps) comps))
+    (assoc ent (get-comp-type comps) comps)))
+
+(defn entity-dead? [ent]
+  (-> ent :CoreComp :death-flag))
