@@ -25,4 +25,6 @@
   (vlen [^Vec2f v] (Vec2f/length v))
   (vunit [^Vec2f v] (Vec2f/unit v))
   (vunit-normal [^Vec2f v] (Vec2f/unitNormal v))
-  (vlerp [^Vec2f v1 ^Vec2f v2 ^double k] (Vec2f/lerp v1 v2 k)))
+  (vlerp [^Vec2f v1 ^Vec2f v2 ^double k] (Vec2f/lerp v1 v2 k))
+  (dist [^Vec2f v1 ^Vec2f v2] (Vec2f/dist v1 v2))
+  (sqdist [^Vec2f v1 ^Vec2f v2] (Vec2f/squaredDist v1 v2)))

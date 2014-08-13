@@ -13,6 +13,8 @@
 
 (set! *warn-on-reflection* true)
 
+(class (transient {}))
+
 ; Components:
 
 (defcomp Position [^Vec2f v])
@@ -48,32 +50,6 @@
 (defn bub-diam [] (* (bub-rad) 2))
 
 (defn groups[] [:red :green :blue :cyan :magenta :yellow])
-
-; Generic behaviors:
-
-(defn phys-step [{pos :Position, vel :Velocity, phys :Physics} dt]
-  (let [{:keys [m f]} phys
-        invm (/ m)
-        vel1 (v+ (:v vel) (v* f invm dt))
-        pos1 (v+ (:v pos) (v* vel1 dt))]
-    [(assoc pos :v pos1)
-     (assoc phys :f (Vec2f. 0 0))
-     (assoc vel :v vel1)]))
-
-(defn accel [{phys :Physics} a]
-  (let [{:keys [f m]} phys]
-    (assoc phys :f (v+ f (v* a m)))))
-
-(defn vspring [{vel :Velocity, pos :Position} base k]
-  (assoc vel :v (v+ (:v vel) (v* (v- base (:v pos)) k))))
-
-(defn bounce [{pos :Position, vel :Velocity, phys :Physics} x0 y0 x1 y1]
-  (let [^Vec2f velv (:v vel)
-        ^Vec2f posv (:v pos)
-        vx1 (* (.x velv) (if (outside-range? (.x posv) x0 x1) -1 1))
-        vy1 (* (.y velv) (if (outside-range? (.y posv) y0 y1) -1 1))]
-    [(assoc vel :v (Vec2f. vx1 vy1))
-     (assoc pos :v (Vec2f. (clamp (.x posv) x0 x1) (clamp (.y posv) y0 y1)))]))
 
 ; Bubbles behaviors:
 
@@ -127,12 +103,24 @@
 
 ; ENTITY LIST FUNCS:
 
-(def game (atom (spawn (make-game) (generate-random-grid 10 10))))
+(def game (atom (spawn (make-game) (generate-random-grid 11 80))))
+
+(defn spawn! [ents] (swap! game spawn ents))
+
+(defn set-ent [game k v] (assoc game :ent-map (assoc (:ent-map game) k v) ))
+
+(defn set-ent! [k v] (swap! game set-ent k v) )
+
+(set-ent! 99 (assoc-in (make-grid-bubble 9 9 30) [:Velocity :v] (Vec2f. 200 200)))
+
+;(spawn! (make-bubble 200 400 :red :shot))
 
 ; Drawing:
 
+(class (make-grid-bubble 0 0 30))
+
 (defn setup []
-  (q/frame-rate 60)
+  (q/frame-rate 1000)
   (q/background 200)
   (q/text-font (q/create-font "DejaVu Sans" 28 true)))
 
@@ -153,8 +141,8 @@
   (swap! game game-step 0.05)
 
   (doseq [{{^Vec2f posv :v} :Position, {group :group} :BubbleData} (vals (:ent-map @game))]
-    (apply q/fill (get-group-color group))
-    (q/ellipse (.x posv) (.y posv) (bub-diam) (bub-diam)))
+    (comment (apply q/fill (get-group-color group))
+    (q/ellipse (.x posv) (.y posv) (bub-diam) (bub-diam))))
 
      (q/text (str (q/current-frame-rate))
           300   ; x

@@ -9,4 +9,6 @@
   (vlen [v])
   (vunit [v])
   (vunit-normal [v])
-  (vlerp [v]))
+  (vlerp [v])
+  (dist [v1 v2])
+  (sqdist [v1 v2]))
